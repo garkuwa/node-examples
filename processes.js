@@ -3,32 +3,35 @@ const childProc = require("child_process");
 const PROCESSES_COUNT = 5;
 const delay = util.promisify(setTimeout);
 
-main().catch(()=> console.log("Opps"));
+main().catch(() => console.log("Opps"));
 
-async function main(){
+async function main() {
     let processes, success;
-    while(true){
+    while (true) {
         process.stdout.write(`Starting ${PROCESSES_COUNT} child processes`);
         processes = [];
-        for(let i = 0; i <= PROCESSES_COUNT; i++){
+        for (let i = 0; i <= PROCESSES_COUNT; i++) {
             processes.push(
-                util.promisify(childProc.spawn("node", ["child-process.js"]).on)("exit")
+                promisifyChildProc(
+                    childProc.spawn("node", ["child-process.js"])
+                )
             );
         }
-        success = await Promise.all(processes).then((values) => {
-            console.log(values);
-            return values.every(val => val.code === 0);
-        });
+        success = await Promise.all(processes).then((codes) => codes.every(code => code === 0));
 
         console.log(success);
-        if(success){
+        if (success) {
             console.log("Success!");
             return;
         }
         console.log("Retrying!");
         delay(5000);
     }
-     //const child = util.promisify(childProc.spawn("node", ["child-process.js"]).on);
+}
 
-    // child.on("exit", (code) => console.log("Child has ended", code));
+function promisifyChildProc(process) {
+    return new Promise((res, rej) => {
+        process.addListener("error", rej);
+        process.addListener("exit", res);
+    })
 }
